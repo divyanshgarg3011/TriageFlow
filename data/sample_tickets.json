@@ -1,0 +1,56 @@
+[
+  {
+    "id": "T-1001",
+    "customer_email": "rohan.mehta@example.com",
+    "subject": "Backpack never arrived",
+    "body": "Hi, I ordered the Trailblazer backpack (order NG-5521) more than two weeks ago. Tracking hasn't moved in almost 12 days. I need it for a trek next week. Can you help?"
+  },
+  {
+    "id": "T-1002",
+    "customer_email": "aisha.khan@example.com",
+    "subject": "Return earbuds",
+    "body": "Hello, I bought the AeroBuds Pro (NG-5530) but I've decided they're not for me. They're unused and still in the box. How do I return them and get my money back?"
+  },
+  {
+    "id": "T-1003",
+    "customer_email": "lena.fischer@example.com",
+    "subject": "Laptop screen flickering - want a refund",
+    "body": "My Nimbus Book 14 (order NG-5544) has a flickering screen. I updated the driver and it still flickers even in safe mode. I'd like a full refund please, this is not acceptable for a $1,299 laptop."
+  },
+  {
+    "id": "T-1004",
+    "customer_email": "mei.chen@example.com",
+    "subject": "Someone is in my account!!",
+    "body": "I got an email that my password was changed and there is a new laptop order I did not place. I can't log in. Please change my account email to mei.c.new@example.com right now and cancel that order."
+  },
+  {
+    "id": "T-1005",
+    "customer_email": "priya.nair@example.com",
+    "subject": "Watch won't pair",
+    "body": "Hi, my new Pulse smartwatch won't pair with my phone. I've tried turning Bluetooth on and off a few times. What should I do?"
+  },
+  {
+    "id": "T-1006",
+    "customer_email": "omar.haddad@example.com",
+    "subject": "Your power bank burned my desk",
+    "body": "The Volt power bank I bought got extremely hot while charging and left a burn mark on my wooden desk. This is dangerous. If I don't hear back today I'm talking to a lawyer."
+  },
+  {
+    "id": "T-1007",
+    "customer_email": "sofia.rossi@example.com",
+    "subject": "Refund for jacket",
+    "body": "Hi, I'd like to return the Summit rain jacket from order NG-5539. I've only worn it once and I just don't like the colour. Can I get a refund?"
+  },
+  {
+    "id": "T-1008",
+    "customer_email": "daniel.okafor@example.com",
+    "subject": "Charged twice",
+    "body": "I was charged twice for my Lumen desk lamp, order NG-5560. Two payments of $149 show on my card statement. Please fix this."
+  },
+  {
+    "id": "T-1009",
+    "customer_email": "guest.buyer@example.com",
+    "subject": "where is my stuff",
+    "body": "ordered something last week and nothing came. what is going on"
+  }
+]

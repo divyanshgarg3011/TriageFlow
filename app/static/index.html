@@ -1,0 +1,600 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TriageFlow</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#0E1B2C; --panel:#13243A; --panel-2:#182C45; --rule:#24395299; --rule-solid:#243952;
+  --text:#E4ECF4; --muted:#8CA0B6; --faint:#5F7590;
+  --triage:#F2B233; --research:#35B8A6; --resolution:#6B9BF2; --qa:#D46A9F;
+  --gate:#C9D3DE; --human:#F07A4A; --auto:#5CC48A; --danger:#F06A6A;
+  --radius-s:6px; --radius-m:10px;
+  --sans:"IBM Plex Sans",system-ui,sans-serif; --mono:"IBM Plex Mono",ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--ink);color:var(--text);font:15px/1.5 var(--sans)}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--resolution);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* header */
+header{display:flex;align-items:center;gap:20px;padding:14px 22px;border-bottom:1px solid var(--rule-solid);flex-wrap:wrap}
+.brand{display:flex;align-items:baseline;gap:12px;margin-right:auto}
+.brand h1{font-size:22px;font-weight:700;letter-spacing:-.01em;margin:0}
+.brand p{margin:0;color:var(--muted);font-size:14px}
+.mode{font-size:13px;padding:4px 10px;border-radius:99px;border:1px solid var(--rule-solid);color:var(--muted)}
+.mode b{color:var(--triage);font-weight:600}
+.mode.live b{color:var(--auto)}
+.stats{display:flex;gap:18px}
+.stat{display:flex;flex-direction:column;line-height:1.15}
+.stat span{font-size:12px;color:var(--muted)}
+.stat strong{font-size:17px;font-weight:600;font-variant-numeric:tabular-nums}
+.btn{border:1px solid var(--rule-solid);background:var(--panel);padding:7px 14px;border-radius:var(--radius-s);cursor:pointer;font-weight:500;font-size:14px}
+.btn:hover{background:var(--panel-2)}
+.btn.primary{background:var(--text);color:var(--ink);border-color:var(--text)}
+.btn.primary:hover{background:#fff}
+.btn.good{background:var(--auto);color:#08240f;border-color:var(--auto)}
+.btn.bad{border-color:var(--danger);color:var(--danger)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.actions{display:flex;gap:8px}
+
+/* layout */
+main{display:grid;grid-template-columns:290px minmax(0,1fr) 370px;height:calc(100vh - 66px)}
+.col{min-height:0;display:flex;flex-direction:column}
+.col + .col{border-left:1px solid var(--rule-solid)}
+.col-head{padding:14px 18px 10px;display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.col-head h2{font-size:15px;font-weight:600;margin:0}
+.col-head small{color:var(--muted);font-size:13px}
+.scroll{overflow:auto;min-height:0;flex:1}
+
+/* inbox */
+.inbox{list-style:none;margin:0;padding:0 10px 14px}
+.inbox li{border-radius:var(--radius-s);padding:10px 10px 10px 14px;cursor:pointer;position:relative;margin-bottom:2px}
+.inbox li:hover{background:var(--panel)}
+.inbox li[aria-selected="true"]{background:var(--panel-2)}
+.inbox li::before{content:"";position:absolute;left:4px;top:12px;bottom:12px;width:3px;border-radius:3px;background:var(--stage-color,transparent)}
+.inbox .subj{font-weight:500;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.inbox .from{color:var(--muted);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.inbox .row{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:4px}
+.status{font-size:12px;font-weight:500;color:var(--muted);display:inline-flex;align-items:center;gap:6px}
+.status i{width:7px;height:7px;border-radius:50%;background:var(--faint);display:inline-block}
+.status.running i{background:var(--triage);animation:blink 1s infinite}
+.status.resolved i,.status.approved i{background:var(--auto)}
+.status.needs_human i{background:var(--human)}
+.status.rejected i,.status.failed i{background:var(--danger)}
+.tid{font-family:var(--mono);font-size:12px;color:var(--faint)}
+@keyframes blink{50%{opacity:.3}}
+
+/* transit line */
+.line-wrap{padding:6px 18px 4px;border-bottom:1px solid var(--rule-solid)}
+#line{width:100%;height:auto;display:block}
+#line text{font-family:var(--sans);fill:var(--text)}
+#line .lbl{font-size:15px;font-weight:600}
+#line .sub{font-size:12px;fill:var(--muted)}
+.station circle.ring{fill:var(--ink);stroke-width:4;transition:fill .3s}
+.station.done circle.ring{fill:var(--c)}
+.station.active circle.halo{animation:halo 1.3s ease-out infinite}
+.station circle.halo{fill:none;stroke:var(--c);stroke-width:2;opacity:0}
+@keyframes halo{0%{r:14;opacity:.9}100%{r:30;opacity:0}}
+.seg{stroke-width:7;stroke-linecap:round;opacity:.28;transition:opacity .4s}
+.seg.lit{opacity:1}
+#loop{fill:none;stroke:var(--qa);stroke-width:3;stroke-dasharray:6 7;opacity:.3}
+#loop.lit{opacity:1;animation:dash 1s linear infinite}
+@keyframes dash{to{stroke-dashoffset:-26}}
+.term rect{fill:var(--panel);stroke:var(--rule-solid);stroke-width:1.5;transition:fill .3s,stroke .3s}
+.term.lit rect{fill:var(--tc);stroke:var(--tc)}
+.term.lit text{fill:var(--ink)!important}
+#token{transition:transform .7s cubic-bezier(.5,0,.2,1)}
+#token circle{fill:var(--text);stroke:var(--ink);stroke-width:3}
+
+/* trace */
+.trace{list-style:none;margin:0;padding:6px 18px 40px}
+.ev{display:grid;grid-template-columns:18px minmax(0,1fr);gap:10px;padding:5px 0;font-size:14px}
+.ev .mark{width:10px;height:10px;border-radius:50%;margin-top:6px;justify-self:center;background:var(--c,var(--faint))}
+.ev.meta{color:var(--muted);font-size:13px}
+.ev.meta .mark{width:6px;height:6px;margin-top:7px;opacity:.6}
+.ev.agent{margin-top:16px;padding-top:10px;border-top:1px solid var(--rule-solid)}
+.ev.agent .mark{width:14px;height:14px;border-radius:4px;margin-top:3px}
+.ev.agent h3{margin:0;font-size:16px;font-weight:600}
+.ev.agent p{margin:0;color:var(--muted);font-size:13px}
+.ev.thought .body{color:#C5D3E2;font-style:italic}
+.ev.route .body{color:var(--text)}
+.ev.route .body b{color:var(--c)}
+.mono{font-family:var(--mono);font-size:12.5px}
+details.tool{background:var(--panel);border:1px solid var(--rule-solid);border-radius:var(--radius-s);padding:6px 10px}
+details.tool summary{cursor:pointer;list-style:none;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+details.tool summary::-webkit-details-marker{display:none}
+details.tool summary .name{font-family:var(--mono);font-weight:500;color:var(--c)}
+details.tool summary .args{font-family:var(--mono);font-size:12.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+details.tool summary .ok{margin-left:auto;font-size:12px;color:var(--muted)}
+details.tool pre{margin:8px 0 2px;max-height:280px;overflow:auto;font:12.5px/1.45 var(--mono);color:#C5D3E2;white-space:pre-wrap;word-break:break-word}
+.output{border-left:3px solid var(--c);padding:6px 12px;background:var(--panel)}
+.output dl{display:grid;grid-template-columns:max-content 1fr;gap:3px 14px;margin:4px 0 0;font-size:13.5px}
+.output dt{color:var(--muted)}
+.output dd{margin:0}
+.output ul{margin:2px 0 0;padding-left:18px}
+.gate-list{list-style:none;margin:4px 0 0;padding:0}
+.gate-list li{padding:2px 0}
+.empty{color:var(--muted);padding:28px 18px;max-width:52ch}
+.empty h3{color:var(--text);margin:0 0 6px;font-size:17px}
+
+/* detail */
+.card{padding:4px 18px 16px}
+.card + .card{border-top:1px solid var(--rule-solid);padding-top:14px}
+.card h3{font-size:14px;font-weight:600;margin:0 0 8px;color:var(--muted)}
+.ticket-subj{font-size:17px;font-weight:600;margin:0 0 2px}
+.ticket-body{white-space:pre-wrap;margin:10px 0 0;color:#D3DEEA}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.chip{font-size:12.5px;padding:2px 9px;border-radius:99px;background:var(--panel-2);border:1px solid var(--rule-solid)}
+.chip.urgent,.chip.angry{border-color:var(--danger);color:var(--danger)}
+.chip.high,.chip.frustrated{border-color:var(--triage);color:var(--triage)}
+.banner{border-radius:var(--radius-s);padding:10px 12px;font-weight:500;margin-bottom:12px}
+.banner small{display:block;font-weight:400;color:inherit;opacity:.85;margin-top:2px}
+.banner.resolved,.banner.approved{background:#5CC48A22;color:var(--auto)}
+.banner.needs_human{background:#F07A4A22;color:var(--human)}
+.banner.running,.banner.queued{background:#F2B23318;color:var(--triage)}
+.banner.rejected,.banner.failed{background:#F06A6A22;color:var(--danger)}
+textarea.reply{width:100%;min-height:210px;background:var(--panel);border:1px solid var(--rule-solid);border-radius:var(--radius-s);padding:10px;resize:vertical;line-height:1.5;font-size:14px}
+textarea.reply[readonly]{border-color:transparent}
+.act-list{list-style:none;padding:0;margin:0 0 10px}
+.act-list li{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid var(--rule-solid);font-size:14px}
+.act-list li span:first-child{white-space:nowrap;font-weight:500}
+.act-list li span:last-child{color:var(--muted);text-align:right}
+.reasons{margin:0 0 12px;padding-left:18px;color:var(--human);font-size:14px}
+.metrics{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px}
+.metrics div span{display:block;font-size:12px;color:var(--muted)}
+.metrics div strong{font-variant-numeric:tabular-nums;font-weight:600}
+.decide{display:flex;gap:8px;margin-top:10px}
+
+/* modal */
+dialog{background:var(--panel);color:var(--text);border:1px solid var(--rule-solid);border-radius:var(--radius-m);padding:22px;width:min(520px,92vw)}
+dialog::backdrop{background:#050c16bb}
+dialog h2{margin:0 0 14px;font-size:18px}
+dialog label{display:block;font-size:13px;color:var(--muted);margin:12px 0 4px}
+dialog input,dialog select,dialog textarea{width:100%;background:var(--ink);border:1px solid var(--rule-solid);border-radius:var(--radius-s);padding:8px 10px}
+dialog textarea{min-height:120px;resize:vertical}
+dialog .row{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
+.hint{font-size:13px;color:var(--muted);margin-top:4px}
+
+@media (max-width:1100px){
+  main{grid-template-columns:1fr;height:auto}
+  .col + .col{border-left:0;border-top:1px solid var(--rule-solid)}
+  .scroll{max-height:none;overflow:visible}
+  .inbox-col .scroll{max-height:300px;overflow:auto}
+  .stats{order:3;width:100%;justify-content:space-between}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <h1>TriageFlow</h1>
+    <p>A support desk run by four Claude agents</p>
+  </div>
+  <div class="stats" aria-live="polite">
+    <div class="stat"><span>Processed</span><strong id="s-proc">0</strong></div>
+    <div class="stat"><span>Auto-resolved</span><strong id="s-auto">–</strong></div>
+    <div class="stat"><span>To a human</span><strong id="s-esc">0</strong></div>
+    <div class="stat"><span>Avg time</span><strong id="s-time">–</strong></div>
+    <div class="stat"><span>Model spend</span><strong id="s-cost">$0.00</strong></div>
+  </div>
+  <span class="mode" id="mode">…</span>
+  <div class="actions">
+    <button class="btn primary" id="btn-all">Process inbox</button>
+    <button class="btn" id="btn-new">New ticket</button>
+    <button class="btn" id="btn-reset" title="Restore sample tickets and data">Reset</button>
+  </div>
+</header>
+
+<main>
+  <section class="col inbox-col" aria-label="Inbox">
+    <div class="col-head"><h2>Inbox</h2><small id="inbox-count"></small></div>
+    <div class="scroll"><ul class="inbox" id="inbox" role="listbox" aria-label="Tickets"></ul></div>
+  </section>
+
+  <section class="col" aria-label="Agent workflow">
+    <div class="line-wrap">
+      <svg id="line" viewBox="0 0 1000 178" role="img" aria-label="Workflow: triage, research, resolution, QA review, policy gate, then sent automatically or human review">
+        <path id="loop" d="M570 74 C 545 18, 425 18, 400 74"/>
+        <text x="485" y="22" text-anchor="middle" class="sub" id="loop-label">revise loop</text>
+        <g id="segs"></g>
+        <g id="stations"></g>
+        <g id="terms"></g>
+        <g id="token" transform="translate(70 90)" opacity="0"><circle r="7"/></g>
+      </svg>
+    </div>
+    <div class="col-head"><h2 id="trace-title">Live trace</h2><small id="trace-sub"></small></div>
+    <div class="scroll" id="trace-scroll">
+      <ul class="trace" id="trace">
+        <li class="empty"><h3>Pick a ticket to watch the agents work</h3>Press Process inbox to send every ticket through the desk, or open one ticket and run it on its own. Each step shows up here as it happens: model calls, tool calls with their results, hand-offs and the final policy check.</li>
+      </ul>
+    </div>
+  </section>
+
+  <aside class="col" aria-label="Ticket details">
+    <div class="scroll" id="detail"></div>
+  </aside>
+</main>
+
+<dialog id="dlg-new">
+  <form method="dialog" id="form-new">
+    <h2>New ticket</h2>
+    <label for="f-email">Customer</label>
+    <select id="f-email"></select>
+    <p class="hint">Pick a customer from the store, or "Someone not in the store" to test the unknown-customer path.</p>
+    <label for="f-subj">Subject</label>
+    <input id="f-subj" required maxlength="200" placeholder="My order arrived damaged">
+    <label for="f-body">Message</label>
+    <textarea id="f-body" required maxlength="4000" placeholder="Write what the customer would send…"></textarea>
+    <div class="row">
+      <button class="btn" value="cancel" formnovalidate>Cancel</button>
+      <button class="btn primary" value="send" id="f-send">Send to the desk</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+const AG = {
+  triage:{label:"Triage", color:"var(--triage)"},
+  research:{label:"Research", color:"var(--research)"},
+  resolution:{label:"Resolution", color:"var(--resolution)"},
+  qa:{label:"QA review", color:"var(--qa)"},
+  gate:{label:"Policy gate", color:"var(--gate)"},
+  human:{label:"Human", color:"var(--human)"},
+};
+const STATIONS = [
+  {key:"triage", x:70}, {key:"research", x:230}, {key:"resolution", x:400}, {key:"qa", x:570}, {key:"gate", x:740},
+];
+const TERMS = {auto:{x:905,y:44,label:"Sent automatically",c:"var(--auto)"}, human:{x:905,y:136,label:"Human review",c:"var(--human)"}};
+const STATUS_TEXT = {new:"Not processed", queued:"Queued", running:"Working", resolved:"Resolved automatically",
+  needs_human:"Waiting for a human", approved:"Approved by a human", rejected:"Rejected by a human", failed:"Failed"};
+
+let CFG = null, tickets = [], selected = null; // selected = ticket id
+let runEvents = [];   // events of the selected run
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const api = async (path, opts={}) => {
+  const r = await fetch(path, {headers:{"Content-Type":"application/json"}, ...opts});
+  if (!r.ok) { const t = await r.json().catch(()=>({detail:r.statusText})); throw new Error(t.detail || r.statusText); }
+  return r.json();
+};
+const money = n => "$" + Number(n||0).toFixed(n < 1 ? 4 : 2);
+const short = m => (m||"").replace("claude-","").replace(/-(\d)-(\d)$/, " $1.$2");
+
+/* ---------- transit line ---------- */
+function drawLine(){
+  const segs = $("#segs"), st = $("#stations"), terms = $("#terms");
+  const y = 90;
+  let s = "";
+  for (let i=0;i<STATIONS.length-1;i++){
+    const a = STATIONS[i], b = STATIONS[i+1];
+    s += `<line class="seg" data-from="${a.key}" x1="${a.x}" y1="${y}" x2="${b.x}" y2="${y}" stroke="${AG[a.key].color}"/>`;
+  }
+  const g = STATIONS.at(-1);
+  for (const [k,t] of Object.entries(TERMS)){
+    s += `<path class="seg" data-from="gate-${k}" d="M${g.x} ${y} C ${g.x+60} ${y}, ${t.x-110} ${t.y}, ${t.x-70} ${t.y}" fill="none" stroke="${t.c}"/>`;
+  }
+  segs.innerHTML = s;
+  const model = k => { const a = CFG?.agents.find(a=>a.key===k); return a ? short(a.model) : (k==="gate" ? "rules in code" : ""); };
+  st.innerHTML = STATIONS.map(a => `
+    <g class="station" data-key="${a.key}" style="--c:${AG[a.key].color}">
+      <circle class="halo" cx="${a.x}" cy="${y}" r="14"/>
+      <circle class="ring" cx="${a.x}" cy="${y}" r="13" stroke="${AG[a.key].color}"/>
+      <text class="lbl" x="${a.x}" y="${y+40}" text-anchor="middle">${AG[a.key].label}</text>
+      <text class="sub" x="${a.x}" y="${y+58}" text-anchor="middle">${esc(model(a.key))}</text>
+    </g>`).join("");
+  terms.innerHTML = Object.entries(TERMS).map(([k,t]) => `
+    <g class="term" data-key="${k}" style="--tc:${t.c}">
+      <rect x="${t.x-72}" y="${t.y-17}" width="160" height="34" rx="17"/>
+      <text x="${t.x+8}" y="${t.y+5}" text-anchor="middle" style="font-size:14px;font-weight:600">${t.label}</text>
+    </g>`).join("");
+}
+
+function lineState(){
+  // derive everything from the selected run's events
+  const done = new Set(); let active = null, terminal = null, looped = false, rev = 0;
+  for (const e of runEvents){
+    if (e.type === "stage"){
+      if (active && active !== e.data.stage) done.add(active);
+      active = e.data.stage;
+    }
+    if (e.type === "route" && e.data.frm === "qa" && e.data.to === "resolution"){ looped = true; rev++; }
+    if (e.type === "route" && e.data.frm === "gate") terminal = e.data.to;   // auto | human
+    if (e.type === "awaiting_human") terminal = "human";
+  }
+  if (active === "done" || active === "human"){ done.add("gate"); if (active==="human") terminal="human"; }
+  if (terminal) STATIONS.forEach(s=>done.add(s.key));
+  document.querySelectorAll(".station").forEach(g=>{
+    const k = g.dataset.key;
+    g.classList.toggle("done", done.has(k));
+    g.classList.toggle("active", k === active && !terminal);
+  });
+  document.querySelectorAll(".seg").forEach(l=>{
+    const f = l.dataset.from;
+    l.classList.toggle("lit", f.startsWith("gate-") ? terminal === f.slice(5) : done.has(f));
+  });
+  document.querySelectorAll(".term").forEach(t=> t.classList.toggle("lit", t.dataset.key === terminal));
+  $("#loop").classList.toggle("lit", looped);
+  $("#loop-label").textContent = rev ? `revised ${rev}×` : "revise loop";
+  const tok = $("#token");
+  if (!runEvents.length){ tok.setAttribute("opacity","0"); return; }
+  tok.setAttribute("opacity","1");
+  let x = 70, y = 90;
+  if (terminal){ x = TERMS[terminal].x - 72; y = TERMS[terminal].y; }
+  else { const s = STATIONS.find(s=>s.key===active); if (s) x = s.x; }
+  tok.setAttribute("transform", `translate(${x} ${y})`);
+}
+
+/* ---------- trace ---------- */
+function agentMark(agent){ return AG[agent]?.color || "var(--faint)"; }
+
+function kv(obj, keys){
+  return `<dl>${keys.filter(k=>obj[k]!==undefined && obj[k]!=="" && !(Array.isArray(obj[k])&&!obj[k].length)).map(k=>{
+    let v = obj[k];
+    if (Array.isArray(v)) v = `<ul>${v.map(x=>`<li>${esc(typeof x==="object" ? (x.rule ? `${x.rule} (${x.source})` : JSON.stringify(x)) : x)}</li>`).join("")}</ul>`;
+    else if (typeof v === "boolean") v = v ? "yes" : "no";
+    else v = esc(v);
+    return `<dt>${esc(k.replaceAll("_"," "))}</dt><dd>${v}</dd>`;
+  }).join("")}</dl>`;
+}
+
+const OUTPUT_KEYS = {
+  triage:["category","priority","sentiment","order_id","summary","needs_human_now","human_reason","confidence"],
+  research:["customer_first_name","customer_tier","order_id","key_facts","policies","open_questions"],
+  resolution:["confidence","rationale"],
+  qa:["verdict","risk_score","issues","feedback"],
+};
+
+function evNode(e){
+  const d = e.data || {}, a = e.agent, c = agentMark(a);
+  const li = document.createElement("li");
+  li.style.setProperty("--c", c);
+  li.dataset.seq = e.seq;
+  const row = (cls, body) => { li.className = "ev " + cls; li.innerHTML = `<span class="mark"></span><div class="body">${body}</div>`; return li; };
+  switch (e.type){
+    case "run_started": return row("meta", `Run started${d.demo ? " in demo mode (scripted model)" : " with Claude"}`);
+    case "agent_started": {
+      const agent = CFG?.agents.find(x=>x.key===a);
+      li.className = "ev agent";
+      li.innerHTML = `<span class="mark"></span><div><h3>${esc(d.label)}${d.attempt>1?` · attempt ${d.attempt}`:""}</h3><p>${esc(agent?.role||"")} · ${esc(d.model)}</p></div>`;
+      return li;
+    }
+    case "llm_call": return row("meta", `Model call ${d.step} · ${d.input_tokens.toLocaleString()} in / ${d.output_tokens.toLocaleString()} out tokens · ${(d.ms/1000).toFixed(1)}s · ${money(d.cost_usd)}`);
+    case "thought": return row("thought", esc(d.text));
+    case "thinking": return row("thought", `<details><summary>Reasoning</summary>${esc(d.text)}</details>`);
+    case "nudge": case "validation_error": return row("meta", esc(d.text || `Output missing ${d.missing?.join(", ")}; asked the agent to fix it`));
+    case "tool_call": {
+      const args = Object.entries(d.args||{}).map(([k,v])=>`${k}=${typeof v==="string"?v:JSON.stringify(v)}`).join(", ");
+      row("tool", `<details class="tool" id="call-${esc(d.call_id)}"><summary><span class="name">${esc(d.tool)}</span><span class="args">${esc(args)}</span><span class="ok">running…</span></summary><pre>waiting for result…</pre></details>`);
+      return li;
+    }
+    case "agent_finished": {
+      const out = d.output || {};
+      let body = `<strong>${esc(d.label)} handed off</strong> after ${d.steps} step${d.steps>1?"s":""}`;
+      body += `<div class="output">${kv(out, OUTPUT_KEYS[a] || Object.keys(out))}`;
+      if (a === "resolution"){
+        body += `<details><summary>Draft reply</summary><pre class="mono" style="white-space:pre-wrap">${esc(out.reply)}</pre></details>`;
+        if (d.proposed_actions?.length) body += kv({proposed_actions: d.proposed_actions.map(x=>`${x.type}${x.order_id?" "+x.order_id:""}${x.amount?" $"+x.amount:""}`)}, ["proposed_actions"]);
+      }
+      return row("finished", body + "</div>");
+    }
+    case "agent_failed": return row("route", `<b>${esc(AG[a]?.label)} failed:</b> ${esc(d.reason)}`);
+    case "route": {
+      const to = d.to === "auto" ? "Sent automatically" : AG[d.to]?.label || d.to;
+      li.style.setProperty("--c", d.to==="auto" ? "var(--auto)" : agentMark(d.to));
+      return row("route", `Hand-off to <b>${esc(to)}</b>: ${esc(d.reason)}`);
+    }
+    case "gate": {
+      li.style.setProperty("--c", "var(--gate)");
+      const items = d.passed ? [`<li>✓ No rule requires a human (refund limit $${d.checks.auto_refund_limit}, min confidence ${d.checks.min_confidence}, max risk ${d.checks.max_risk})</li>`]
+        : d.reasons.map(r=>`<li style="color:var(--human)">✕ ${esc(r)}</li>`);
+      li.className = "ev agent"; li.innerHTML = `<span class="mark"></span><div><h3>Policy gate</h3><p>Deterministic checks in code. The model cannot override these.</p><ul class="gate-list">${items.join("")}</ul></div>`;
+      return li;
+    }
+    case "awaiting_human": li.style.setProperty("--c","var(--human)"); return row("route", `<b>Waiting for a human.</b> Review the draft on the right, edit it if needed, then approve or reject.`);
+    case "action_executed": li.style.setProperty("--c","var(--auto)"); return row("route", `Executed <b>${esc(d.action.type)}</b>${d.action.order_id?" on "+esc(d.action.order_id):""}${d.action.amount?" for $"+esc(d.action.amount):""} · approved by ${esc(d.approved_by)}`);
+    case "reply_sent": li.style.setProperty("--c","var(--auto)"); return row("route", `<b>Reply sent</b> to ${esc(d.to)} · approved by ${esc(d.approved_by)}`);
+    case "human_decision": return row("route", `<b>Human ${d.approve?"approved":"rejected"}</b>${d.edited?" with an edited reply":""}${d.note?": "+esc(d.note):""}`);
+    case "run_finished": return row("meta", `Run finished in ${d.summary?.duration_s ?? "?"}s`);
+    case "error": li.style.setProperty("--c","var(--danger)"); return row("route", `<b>Error:</b> ${esc(d.message)}`);
+    default: return null;
+  }
+}
+
+function applyToolResult(e){
+  const el = document.getElementById("call-" + e.data.call_id);
+  if (!el) return;
+  el.querySelector(".ok").textContent = (e.data.ok ? "✓ " : "✕ ") + e.data.ms + " ms";
+  el.querySelector("pre").textContent = JSON.stringify(e.data.result, null, 2);
+}
+
+function appendEvent(e, follow=true){
+  const box = $("#trace-scroll");
+  const nearBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 140;
+  if (e.type === "tool_result"){ applyToolResult(e); return; }
+  const node = evNode(e);
+  if (!node) return;
+  $("#trace").appendChild(node);
+  if (follow && nearBottom) box.scrollTop = box.scrollHeight;
+}
+
+/* ---------- inbox ---------- */
+function renderInbox(){
+  $("#inbox-count").textContent = `${tickets.length} tickets`;
+  $("#inbox").innerHTML = tickets.map(t=>{
+    const stageColor = t.status==="running" ? agentMark(t.stage) : t.status==="resolved"||t.status==="approved" ? "var(--auto)" : t.status==="needs_human" ? "var(--human)" : "transparent";
+    const st = t.status==="running" && t.stage ? `${AG[t.stage]?.label || t.stage}…` : STATUS_TEXT[t.status];
+    return `<li role="option" tabindex="0" data-id="${esc(t.id)}" aria-selected="${t.id===selected}" style="--stage-color:${stageColor}">
+      <div class="subj">${esc(t.subject)}</div>
+      <div class="from">${esc(t.customer_email)}</div>
+      <div class="row"><span class="status ${esc(t.status)}"><i></i>${esc(st)}</span><span class="tid">${esc(t.id)}</span></div>
+    </li>`;
+  }).join("");
+}
+
+async function refreshTickets(){ tickets = await api("/api/tickets"); renderInbox(); }
+let refreshTimer = null;
+function refreshSoon(){ clearTimeout(refreshTimer); refreshTimer = setTimeout(async()=>{ await refreshTickets(); await refreshStats(); if (selected) renderDetail(); }, 150); }
+
+async function refreshStats(){
+  const s = await api("/api/stats");
+  $("#s-proc").textContent = s.processed;
+  $("#s-auto").textContent = s.auto_rate==null ? "–" : `${s.auto_resolved} (${Math.round(s.auto_rate*100)}%)`;
+  $("#s-esc").textContent = s.escalated;
+  $("#s-time").textContent = s.avg_seconds==null ? "–" : s.avg_seconds+"s";
+  $("#s-cost").textContent = money(s.total_cost_usd);
+}
+
+/* ---------- selection + detail ---------- */
+let currentSummary = null;
+let lastSeq = 0, loading = false, buffered = [];
+async function select(id){
+  selected = id;
+  renderInbox();
+  const t = tickets.find(x=>x.id===id);
+  runEvents = []; currentSummary = null; lastSeq = 0;
+  if (t?.run_id){
+    loading = true; buffered = [];
+    const r = await api(`/api/runs/${t.run_id}`);
+    $("#trace").innerHTML = "";
+    runEvents = r.events; currentSummary = r.summary;
+    r.events.forEach(e=>appendEvent(e,false));
+    lastSeq = r.events.length ? r.events.at(-1).seq : 0;
+    loading = false;
+    // events that streamed in while we were loading the snapshot
+    buffered.filter(e=>e.run_id===t.run_id && e.seq>lastSeq).forEach(e=>{ runEvents.push(e); appendEvent(e,false); lastSeq=e.seq; });
+    $("#trace-scroll").scrollTop = $("#trace-scroll").scrollHeight;
+  } else if (t) {
+    $("#trace").innerHTML = `<li class="empty"><h3>Not processed yet</h3>Run this ticket to watch the four agents and the policy gate handle it step by step.</li>`;
+  } else {
+    $("#trace").innerHTML = `<li class="empty"><h3>Pick a ticket to watch the agents work</h3>Press Process inbox to send every ticket through the desk, or open one ticket and run it on its own.</li>`;
+  }
+  $("#trace-title").textContent = t ? `Live trace · ${t.id}` : "Live trace";
+  $("#trace-sub").textContent = t?.run_id ? t.run_id : "";
+  lineState();
+  renderDetail();
+}
+
+async function renderDetail(){
+  const t = tickets.find(x=>x.id===selected);
+  if (!t){ $("#detail").innerHTML = `<div class="empty"><h3>No ticket open</h3>Choose one from the inbox.</div>`; return; }
+  if (t.run_id && (!currentSummary || currentSummary.id !== t.run_id || ["running","queued"].includes(currentSummary.status) || currentSummary.status !== t.status)){
+    try { currentSummary = (await api(`/api/runs/${t.run_id}`)).summary; } catch {}
+  }
+  const s = t.run_id ? currentSummary : null;
+  const tri = s?.triage;
+  let h = `<div class="card" style="padding-top:16px">
+    <span class="tid">${esc(t.id)} · ${esc(t.customer_email)}</span>
+    <p class="ticket-subj">${esc(t.subject)}</p>
+    <p class="ticket-body">${esc(t.body)}</p>
+    ${tri ? `<div class="chips"><span class="chip">${esc(tri.category)}</span><span class="chip ${esc(tri.priority)}">${esc(tri.priority)} priority</span><span class="chip ${esc(tri.sentiment)}">${esc(tri.sentiment)}</span></div>`:""}
+    ${!s ? `<div class="decide"><button class="btn primary" id="btn-run">Run this ticket</button></div>`:""}
+  </div>`;
+  if (s){
+    const st = s.status;
+    const title = {resolved:"Resolved automatically", needs_human:"Needs a human", approved:"Approved by a human", rejected:"Rejected by a human", running:"Agents are working", queued:"Queued", failed:"Run failed"}[st];
+    const sub = {resolved:"Every gate passed, so the actions ran and the reply was sent.", needs_human:"The policy gate stopped this one. Nothing has been sent or executed yet.",
+      running:`Now at: ${AG[s.stage]?.label || s.stage}`, queued:"Waiting for a free slot", approved:"Actions executed and reply sent.", rejected:"Nothing was sent.", failed: s.error||""}[st];
+    h += `<div class="card"><div class="banner ${esc(st)}">${title}<small>${esc(sub)}</small></div>`;
+    if (s.gate_reasons?.length && st==="needs_human") h += `<ul class="reasons">${s.gate_reasons.map(r=>`<li>${esc(r)}</li>`).join("")}</ul>`;
+    if (s.actions?.length){
+      h += `<h3>${["resolved","approved"].includes(st) ? "Actions taken" : "Proposed actions"}</h3><ul class="act-list">${s.actions.map(a=>`<li><span>${esc(a.type)}${a.order_id?" · "+esc(a.order_id):""}${a.amount?" · $"+Number(a.amount).toFixed(2):""}</span><span>${esc(a.reason||"")}</span></li>`).join("")}</ul>`;
+    }
+    if (s.reply){
+      h += `<h3>${["resolved","approved"].includes(st) ? "Reply sent" : "Draft reply"}</h3><textarea class="reply" id="reply" ${st==="needs_human"?"":"readonly"} aria-label="Reply to customer">${esc(s.reply)}</textarea>`;
+    }
+    if (st==="needs_human") h += `<div class="decide"><button class="btn good" id="btn-approve">Approve and send</button><button class="btn bad" id="btn-reject">Reject</button></div>`;
+    if (["resolved","approved","rejected","failed"].includes(st)) h += `<div class="decide"><button class="btn" id="btn-rerun">Run again</button></div>`;
+    h += `</div>`;
+    const m = s.metrics || {};
+    h += `<div class="card"><h3>This run</h3><div class="metrics">
+      <div><span>Model calls</span><strong>${m.llm_calls ?? 0}</strong></div>
+      <div><span>Tool calls</span><strong>${m.tool_calls ?? 0}</strong></div>
+      <div><span>Tokens in / out</span><strong>${(m.input_tokens||0).toLocaleString()} / ${(m.output_tokens||0).toLocaleString()}</strong></div>
+      <div><span>Cost</span><strong>${money(m.cost_usd)}</strong></div>
+      <div><span>QA revisions</span><strong>${s.revisions}</strong></div>
+      <div><span>Duration</span><strong>${s.duration_s ?? "–"}s</strong></div>
+    </div></div>`;
+  }
+  $("#detail").innerHTML = h;
+  $("#btn-run")?.addEventListener("click", ()=>runTicket(t.id));
+  $("#btn-rerun")?.addEventListener("click", ()=>runTicket(t.id));
+  $("#btn-approve")?.addEventListener("click", ()=>decide(true));
+  $("#btn-reject")?.addEventListener("click", ()=>decide(false));
+}
+
+async function runTicket(id){
+  try { await api(`/api/tickets/${id}/run`, {method:"POST"}); await refreshTickets(); await select(id); }
+  catch(err){ alert(err.message); }
+}
+
+async function decide(approve){
+  const t = tickets.find(x=>x.id===selected);
+  const reply = $("#reply")?.value;
+  const edited = reply !== currentSummary?.reply;
+  try {
+    currentSummary = await api(`/api/runs/${t.run_id}/decision`, {method:"POST", body:JSON.stringify({approve, reply: edited ? reply : null})});
+    await refreshTickets(); renderDetail(); refreshStats();
+  } catch(err){ alert(err.message); }
+}
+
+/* ---------- live stream ---------- */
+function connect(){
+  const es = new EventSource("/api/stream");
+  es.onmessage = msg => {
+    const e = JSON.parse(msg.data);
+    if (e.type === "reset"){ select(null); refreshSoon(); return; }
+    if (loading){ buffered.push(e); if (["stage","run_finished"].includes(e.type)) refreshSoon(); return; }
+    const t = tickets.find(x=>x.id===selected);
+    if (t && e.run_id && e.run_id === t.run_id && e.seq > lastSeq){
+      lastSeq = e.seq;
+      runEvents.push(e); appendEvent(e); lineState();
+      if (["stage","agent_finished","gate","run_finished","awaiting_human","reply_sent"].includes(e.type)){ currentSummary = null; renderDetail(); }
+    }
+    if (["run_queued","stage","run_finished","awaiting_human"].includes(e.type)) refreshSoon();
+  };
+}
+
+/* ---------- controls ---------- */
+$("#inbox").addEventListener("click", e=>{ const li = e.target.closest("li[data-id]"); if (li) select(li.dataset.id); });
+$("#inbox").addEventListener("keydown", e=>{ if ((e.key==="Enter"||e.key===" ") && e.target.dataset.id){ e.preventDefault(); select(e.target.dataset.id); } });
+$("#btn-all").addEventListener("click", async ()=>{
+  const r = await api("/api/run-all", {method:"POST"});
+  await refreshTickets();
+  if (!r.started.length){ alert("Every ticket has already been processed. Use Reset to start over, or Run again on a single ticket."); return; }
+  const first = tickets.find(t=>t.run_id===r.started[0]);
+  if (first) select(first.id);
+});
+$("#btn-reset").addEventListener("click", async ()=>{ try { await api("/api/reset",{method:"POST"}); } catch(err){ alert(err.message); } });
+$("#btn-new").addEventListener("click", async ()=>{
+  const cs = await api("/api/customers");
+  $("#f-email").innerHTML = cs.map(c=>`<option value="${esc(c.email)}">${esc(c.name)} · ${esc(c.tier)}</option>`).join("") + `<option value="new.person@example.com">Someone not in the store</option>`;
+  $("#dlg-new").showModal();
+});
+$("#form-new").addEventListener("submit", async e=>{
+  if (e.submitter?.value !== "send") return;
+  e.preventDefault();
+  try {
+    const r = await api("/api/tickets", {method:"POST", body:JSON.stringify({customer_email:$("#f-email").value, subject:$("#f-subj").value, body:$("#f-body").value})});
+    $("#dlg-new").close(); $("#form-new").reset();
+    await refreshTickets(); select(r.ticket.id);
+  } catch(err){ alert(err.message); }
+});
+
+(async function init(){
+  CFG = await api("/api/config");
+  const mode = $("#mode");
+  mode.innerHTML = CFG.demo ? `<b>Demo mode</b> · scripted model, no API key` : `<b>Live</b> · running on Claude`;
+  mode.classList.toggle("live", !CFG.demo);
+  drawLine();
+  await refreshTickets(); await refreshStats();
+  renderDetail();
+  connect();
+})();
+</script>
+</body>
+</html>

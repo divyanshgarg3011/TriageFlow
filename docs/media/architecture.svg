@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 560" width="1000" height="560" role="img" aria-label="TriageFlow architecture: browser console talks to a FastAPI server; the orchestrator runs four agents that call Claude and tools over SQLite and policy documents; every step goes through an event bus and streams back to the browser">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10z" fill="#8CA0B6"/>
+    </marker>
+    <style>
+      text{font-family:"IBM Plex Sans","Segoe UI",Helvetica,Arial,sans-serif;fill:#E4ECF4}
+      .t{font-size:16px;font-weight:600}
+      .s{font-size:12.5px;fill:#8CA0B6}
+      .l{font-size:12.5px;fill:#C5D3E2}
+      .box{fill:#13243A;stroke:#2E4A68;stroke-width:1.5}
+      .ln{stroke:#8CA0B6;stroke-width:1.6;fill:none}
+      .lb{fill:#0E1B2C}
+    </style>
+  </defs>
+
+  <rect width="1000" height="560" rx="16" fill="#0E1B2C"/>
+
+  <!-- browser -->
+  <rect class="box" x="330" y="26" width="340" height="62" rx="10"/>
+  <text class="t" x="500" y="52" text-anchor="middle">Live console in the browser</text>
+  <text class="s" x="500" y="72" text-anchor="middle">static/index.html · no build step</text>
+
+  <!-- server container -->
+  <rect x="40" y="138" width="920" height="268" rx="14" fill="none" stroke="#2E4A68" stroke-dasharray="6 6"/>
+  <text class="s" x="940" y="162" text-anchor="end">FastAPI server</text>
+
+  <!-- row A -->
+  <rect class="box" x="70" y="180" width="150" height="66" rx="10"/>
+  <text class="t" x="145" y="208" text-anchor="middle">REST API</text>
+  <text class="s" x="145" y="228" text-anchor="middle">tickets · approvals</text>
+
+  <rect class="box" x="260" y="180" width="200" height="66" rx="10"/>
+  <text class="t" x="360" y="208" text-anchor="middle">Orchestrator</text>
+  <text class="s" x="360" y="228" text-anchor="middle">workflow · revise loop · gate</text>
+
+  <rect class="box" x="500" y="180" width="200" height="66" rx="10"/>
+  <text class="t" x="600" y="208" text-anchor="middle">Agent loop × 4</text>
+  <circle cx="563" cy="226" r="5" fill="#F2B233"/>
+  <circle cx="588" cy="226" r="5" fill="#35B8A6"/>
+  <circle cx="613" cy="226" r="5" fill="#6B9BF2"/>
+  <circle cx="638" cy="226" r="5" fill="#D46A9F"/>
+
+  <rect class="box" x="740" y="180" width="190" height="66" rx="10"/>
+  <text class="t" x="835" y="208" text-anchor="middle">Tools</text>
+  <text class="s" x="835" y="228" text-anchor="middle">lookups · search · policy rules</text>
+
+  <!-- row B -->
+  <rect class="box" x="70" y="310" width="150" height="66" rx="10"/>
+  <text class="t" x="145" y="338" text-anchor="middle">Live stream</text>
+  <text class="s" x="145" y="358" text-anchor="middle">Server-Sent Events</text>
+
+  <rect class="box" x="260" y="310" width="160" height="66" rx="10"/>
+  <text class="t" x="340" y="338" text-anchor="middle">Event bus</text>
+  <text class="s" x="340" y="358" text-anchor="middle">trace + audit log</text>
+
+  <!-- row C: outside -->
+  <rect class="box" x="500" y="466" width="200" height="66" rx="10"/>
+  <text class="t" x="600" y="494" text-anchor="middle">Claude API</text>
+  <text class="s" x="600" y="514" text-anchor="middle">or the offline demo model</text>
+
+  <rect class="box" x="726" y="466" width="104" height="66" rx="10"/>
+  <text class="t" x="778" y="494" text-anchor="middle">SQLite</text>
+  <text class="s" x="778" y="514" text-anchor="middle">orders, refunds</text>
+
+  <rect class="box" x="846" y="466" width="104" height="66" rx="10"/>
+  <text class="t" x="898" y="494" text-anchor="middle">Policies</text>
+  <text class="s" x="898" y="514" text-anchor="middle">app/kb/*.md</text>
+
+  <!-- arrows -->
+  <!-- browser -> REST -->
+  <path class="ln" d="M400 88 V112 H145 V178" marker-end="url(#a)"/>
+  <rect class="lb" x="214" y="102" width="122" height="20"/>
+  <text class="l" x="275" y="116" text-anchor="middle">tickets, approvals</text>
+  <!-- SSE -> browser -->
+  <path class="ln" d="M70 343 H52 V57 H328" marker-end="url(#a)"/>
+  <rect class="lb" x="98" y="47" width="116" height="20"/>
+  <text class="l" x="156" y="61" text-anchor="middle">every step, live</text>
+  <!-- REST -> orch -> loop -> tools -->
+  <path class="ln" d="M220 213 H258" marker-end="url(#a)"/>
+  <path class="ln" d="M460 213 H498" marker-end="url(#a)"/>
+  <path class="ln" d="M700 213 H738" marker-end="url(#a)"/>
+  <!-- orch -> bus, loop -> bus, bus -> stream -->
+  <path class="ln" d="M340 246 V308" marker-end="url(#a)"/>
+  <path class="ln" d="M540 246 V290 Q540 300 530 300 H400 V308" marker-end="url(#a)"/>
+  <path class="ln" d="M260 343 H222" marker-end="url(#a)"/>
+  <!-- loop <-> claude -->
+  <path class="ln" d="M620 248 V464" marker-start="url(#a)" marker-end="url(#a)"/>
+  <rect class="lb" x="628" y="320" width="150" height="20"/>
+  <text class="l" x="634" y="334">messages + tool calls</text>
+  <!-- tools -> db, tools -> kb -->
+  <path class="ln" d="M800 246 V464" marker-end="url(#a)"/>
+  <text class="l" x="806" y="440">read</text>
+  <path class="ln" d="M898 246 V464" marker-end="url(#a)"/>
+  <text class="l" x="904" y="440">search</text>
+  <!-- orch -> db approved actions -->
+  <path class="ln" d="M440 246 V436 Q440 446 450 446 H748 Q758 446 758 456 V464" marker-end="url(#a)" style="stroke:#5CC48A"/>
+  <rect class="lb" x="452" y="420" width="148" height="20"/>
+  <text class="l" x="458" y="434" style="fill:#5CC48A">approved actions only</text>
+</svg>
