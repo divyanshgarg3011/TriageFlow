@@ -4,7 +4,7 @@
 
 **A customer-support desk run by four Claude agents, with a live console that shows every step they take.**
 
-[![CI](https://github.com/divyanshgarg3011/triageflow/actions/workflows/ci.yml/badge.svg)](https://github.com/divyanshgarg3011/triageflow/actions/workflows/ci.yml)
+[![CI](https://github.com/divyanshgarg3011/TriageFlow/actions/workflows/ci.yml/badge.svg)](https://github.com/divyanshgarg3011/TriageFlow/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-SSE-009688?logo=fastapi&logoColor=white)
 ![Claude](https://img.shields.io/badge/Claude-Haiku%205.5%20%7C%20Sonnet%205.5-D4A27F)
@@ -69,8 +69,8 @@ The store is a fictional shop, **Nimbus Gear** (outdoor gear and electronics), w
 ## Quick start
 
 ```bash
-git clone https://github.com/divyanshgarg3011/triageflow.git
-cd triageflow
+git clone https://github.com/divyanshgarg3011/TriageFlow.git
+cd TriageFlow
 python -m venv .venv && source .venv/bin/activate      # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 cp .env.example .env                                     # then add your ANTHROPIC_API_KEY
